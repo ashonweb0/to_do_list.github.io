@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Day</title>
+<style>
+:root{--bg:#eef1f4;--panel:#fff;--ink:#1b2430;--mute:#6b7785;--line:#d9dfe6;--acc:#2f5bea;--acc-ink:#fff;--bad:#c2412d;--ok:#2e8b57;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#12171d;--panel:#1a212a;--ink:#e6ebf0;--mute:#8a96a3;--line:#2a333e;--acc:#6f93ff;--acc-ink:#0f1620;--bad:#ff7b66;--ok:#5cc58a;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+aside{width:260px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px;gap:12px;flex-shrink:0}
+aside h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+#lists{list-style:none;margin:0;padding:0;overflow:auto;flex:1}
+.li{display:flex;align-items:center;gap:4px;border-radius:8px;padding:2px 4px}
+.li.on{background:var(--bg)}
+.li .nm{flex:1;text-align:left;background:none;border:0;padding:8px;border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li.on .nm{font-weight:600}
+.li .ct{color:var(--mute);font-size:13px;min-width:18px;text-align:right}
+.ib{background:none;border:0;color:var(--mute);padding:6px;border-radius:6px;line-height:1}
+.ib:hover{color:var(--ink);background:var(--line)}
+.li input.rn{flex:1;min-width:0;padding:7px;border:1px solid var(--acc);border-radius:6px;background:var(--panel)}
+.add{display:flex;gap:6px}
+.add input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.btn{background:var(--acc);color:var(--acc-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:600}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line);font-weight:500}
+main{flex:1;min-width:0;padding:24px clamp(16px,4vw,48px);overflow:auto}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.top h2{margin:0;font-size:28px;letter-spacing:-.02em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs button{border:0;background:none;padding:6px 12px;border-radius:7px;color:var(--mute)}
+.tabs button.on{background:var(--acc);color:var(--acc-ink);font-weight:600}
+form.new{display:flex;gap:8px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:16px}
+form.new input{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+form.new input[type=text]{flex:1 1 220px;min-width:0}
+#tasks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.t{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;flex-wrap:wrap}
+.t.late{border-left:4px solid var(--bad)}
+.t.done .tx{text-decoration:line-through;color:var(--mute)}
+.t input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+.tx{flex:1 1 180px;min-width:0;word-break:break-word}
+.t input[type=date],.t input[type=time]{border:1px solid transparent;background:none;padding:5px 6px;border-radius:6px;color:var(--mute);font-size:14px}
+.t input[type=date]:hover,.t input[type=time]:hover,.t input[type=date]:focus,.t input[type=time]:focus{border-color:var(--line);background:var(--bg);color:var(--ink)}
+.empty{color:var(--mute);padding:28px 8px;text-align:center}
+.bar{display:flex;gap:10px;align-items:center;color:var(--mute);font-size:14px;margin:0 0 12px;flex-wrap:wrap}
+#toasts{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9;max-width:min(360px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:10px;display:flex;gap:10px;align-items:start;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.toast b{display:block}
+.toast button{margin-left:auto;background:none;border:0;color:inherit;opacity:.7}
+@media (max-width:700px){body{flex-direction:column}aside{width:100%;border-right:0;border-bottom:1px solid var(--line);max-height:42vh}}
+@media (prefers-reduced-motion:no-preference){.toast{animation:in .2s ease-out}@keyframes in{from{opacity:0;transform:translateY(8px)}}}
+</style>
+</head>
+<body>
+<aside>
+  <h1>My Day</h1>
+  <ul id="lists" aria-label="Lists"></ul>
+  <form class="add" id="addList"><input id="newList" placeholder="New list name" aria-label="New list name" maxlength="40"><button class="btn" type="submit">Add</button></form>
+</aside>
+<main>
+  <div class="top">
+    <h2 id="title"></h2>
+    <div class="tabs" id="tabs" role="tablist">
+      <button data-v="today">Today</button><button data-v="upcoming">Upcoming</button><button data-v="all">All</button>
+    </div>
+  </div>
+  <div class="bar" id="bar"></div>
+  <form class="new" id="addTask">
+    <input type="text" id="tText" placeholder="Add a task" aria-label="Task" maxlength="200" required>
+    <input type="date" id="tDate" aria-label="Date" required>
+    <input type="time" id="tTime" aria-label="Time (optional)">
+    <button class="btn" type="submit">Add task</button>
+  </form>
+  <ul id="tasks"></ul>
+</main>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+const KEY='myday.v1';
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const pad=n=>String(n).padStart(2,'0');
+const dstr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>dstr(new Date());
+
+let S;
+function load(){
+  try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+  if(!S||!Array.isArray(S.lists)||!S.lists.length){
+    const a=uid(),b=uid();
+    S={lists:[{id:a,name:'Personal'},{id:b,name:'Work'}],tasks:[],active:a,view:'today',lastSummary:''};
+  }
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+load();
+
+const when=t=>t.date?new Date(t.date+'T'+(t.time||'23:59')):null;
+const activeList=()=>S.lists.find(l=>l.id===S.active)||S.lists[0];
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+let renaming=null;
+function renderLists(){
+  const ul=$('#lists');ul.innerHTML='';
+  S.lists.forEach(l=>{
+    const li=document.createElement('li');li.className='li'+(l.id===S.active?' on':'');
+    const pending=S.tasks.filter(t=>t.listId===l.id&&!t.done&&t.date===today()).length;
+    if(renaming===l.id){
+      li.innerHTML='<input class="rn" aria-label="Rename list" maxlength="40">';
+      const inp=li.firstChild;inp.value=l.name;
+      const done=ok=>{if(renaming!==l.id)return;if(ok&&inp.value.trim())l.name=inp.value.trim();renaming=null;save();render()};
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter')done(true);if(e.key==='Escape')done(false)});
+      inp.addEventListener('blur',()=>done(true));
+      setTimeout(()=>{inp.focus();inp.select()});
+    }else{
+      li.innerHTML='<button class="nm" title="Open list">'+esc(l.name)+'</button><span class="ct" title="Due today">'+(pending||'')+'</span><button class="ib" title="Rename list" aria-label="Rename list">✎</button><button class="ib" title="Delete list" aria-label="Delete list">✕</button>';
+      const [nm,,rn,del]=li.children;
+      nm.onclick=()=>{S.active=l.id;save();render()};
+      nm.ondblclick=()=>{renaming=l.id;renderLists()};
+      rn.onclick=()=>{renaming=l.id;renderLists()};
+      del.onclick=()=>{
+        if(S.lists.length===1){toast('Keep one list','You need at least one list.');return}
+        const n=S.tasks.filter(t=>t.listId===l.id).length;
+        if(!confirm('Delete "'+l.name+'"'+(n?' and its '+n+' task'+(n>1?'s':''):'')+'?'))return;
+        S.lists=S.lists.filter(x=>x.id!==l.id);S.tasks=S.tasks.filter(t=>t.listId!==l.id);
+        if(S.active===l.id)S.active=S.lists[0].id;save();render();
+      };
+    }
+    ul.appendChild(li);
+  });
+}
+
+function renderTasks(){
+  const l=activeList();$('#title').textContent=l.name;
+  document.title=l.name+' – My Day';
+  document.querySelectorAll('#tabs button').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.view);b.setAttribute('aria-selected',b.dataset.v===S.view)});
+  const td=today();
+  let items=S.tasks.filter(t=>t.listId===l.id);
+  if(S.view==='today')items=items.filter(t=>t.date===td||(t.date<td&&!t.done));
+  else if(S.view==='upcoming')items=items.filter(t=>t.date>td);
+  items.sort((a,b)=>(a.done-b.done)||((a.date+(a.time||'99'))<(b.date+(b.time||'99'))?-1:1));
+  const ul=$('#tasks');ul.innerHTML='';
+  if(!items.length){ul.innerHTML='<li class="empty">'+(S.view==='today'?'Nothing planned for today. Add a task above.':S.view==='upcoming'?'No upcoming tasks.':'No tasks in this list yet.')+'</li>'}
+  const now=new Date();
+  items.forEach(t=>{
+    const li=document.createElement('li');
+    const late=!t.done&&when(t)<now;
+    li.className='t'+(t.done?' done':'')+(late?' late':'');
+    li.innerHTML='<input type="checkbox" aria-label="Done"><span class="tx"></span><input type="date" aria-label="Date"><input type="time" aria-label="Time"><button class="ib" title="Remove task" aria-label="Remove task">✕</button>';
+    const [cb,tx,d,tm,x]=li.children;
+    cb.checked=t.done;tx.textContent=t.text;d.value=t.date;tm.value=t.time||'';
+    cb.onchange=()=>{t.done=cb.checked;save();render()};
+    d.onchange=()=>{if(d.value){t.date=d.value;t.notified=false;save();render()}};
+    tm.onchange=()=>{t.time=tm.value;t.notified=false;save();render()};
+    x.onclick=()=>{S.tasks=S.tasks.filter(z=>z!==t);save();render()};
+    ul.appendChild(li);
+  });
+  renderBar();
+}
+
+function renderBar(){
+  const b=$('#bar');
+  if(!('Notification' in window)){b.textContent='This browser can\'t show system notifications. In-app alerts will still appear while the page is open.';return}
+  if(Notification.permission==='granted')b.textContent='Notifications are on. Keep this page open (a pinned tab works) to get reminders.';
+  else if(Notification.permission==='denied')b.textContent='Notifications are blocked in your browser settings. In-app alerts will still appear.';
+  else{b.innerHTML='<button class="btn ghost" id="en">Turn on notifications</button><span>Get a reminder when a task\'s time arrives.</span>';$('#en').onclick=()=>Notification.requestPermission().then(renderBar)}
+}
+
+function render(){renderLists();renderTasks()}
+
+function toast(title,body){
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML='<div><b></b><span></span></div><button aria-label="Dismiss">✕</button>';
+  t.querySelector('b').textContent=title;t.querySelector('span').textContent=body||'';
+  t.querySelector('button').onclick=()=>t.remove();
+  $('#toasts').appendChild(t);setTimeout(()=>t.remove(),12000);
+}
+function beep(){
+  try{const c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();
+  o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.setValueAtTime(.15,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.4);o.start();o.stop(c.currentTime+.4)}catch(e){}
+}
+function notify(title,body){
+  toast(title,body);beep();
+  try{if('Notification' in window&&Notification.permission==='granted')new Notification(title,{body})}catch(e){}
+}
+
+function check(){
+  const now=new Date();let changed=false;
+  S.tasks.forEach(t=>{
+    if(t.done||t.notified||!t.time)return;
+    const w=when(t);
+    if(w<=now&&now-w<12*3600e3){
+      const l=S.lists.find(x=>x.id===t.listId);
+      notify('Time for: '+t.text,(l?l.name+' · ':'')+t.time);
+      t.notified=true;changed=true;
+    }
+  });
+  if(changed){save();render()}
+}
+function summary(){
+  const td=today();if(S.lastSummary===td)return;
+  const n=S.tasks.filter(t=>!t.done&&t.date===td).length;
+  S.lastSummary=td;save();
+  if(n)toast('Today: '+n+' task'+(n>1?'s':'')+' planned','Open a list to see them.');
+}
+
+$('#addList').onsubmit=e=>{e.preventDefault();const v=$('#newList').value.trim();if(!v)return;
+  const l={id:uid(),name:v};S.lists.push(l);S.active=l.id;$('#newList').value='';save();render()};
+$('#addTask').onsubmit=e=>{e.preventDefault();
+  const text=$('#tText').value.trim();if(!text)return;
+  S.tasks.push({id:uid(),listId:activeList().id,text,date:$('#tDate').value||today(),time:$('#tTime').value,done:false,notified:false});
+  $('#tText').value='';$('#tTime').value='';save();render();$('#tText').focus()};
+$('#tabs').onclick=e=>{const v=e.target.dataset.v;if(v){S.view=v;save();renderTasks()}};
+window.addEventListener('storage',e=>{if(e.key===KEY){load();render()}});
+
+$('#tDate').value=today();
+render();summary();check();
+setInterval(check,15000);
+setInterval(()=>{if(!document.hidden)renderTasks()},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){check();renderTasks()}});
+})();
+</script>
+</body>
+</html>
